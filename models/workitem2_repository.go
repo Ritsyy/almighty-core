@@ -27,7 +27,7 @@ type GormWorkItem2Repository struct {
 
 // Save updates the given work item in storage. Version must be the same as the one int the stored version
 // returns NotFoundError, VersionConflictError, ConversionError or InternalError
-func (r *GormWorkItem2Repository) Save(ctx context.Context, wi app.WorkItemDataForUpdate) (*app.WorkItem, error) {
+func (r *GormWorkItem2Repository) Save(ctx context.Context, wi app.WorkItem2) (*app.WorkItem, error) {
 	res := WorkItem{}
 	id, err := strconv.ParseUint(wi.ID, 10, 64)
 	if err != nil {
@@ -71,15 +71,15 @@ func (r *GormWorkItem2Repository) Save(ctx context.Context, wi app.WorkItemDataF
 	}
 
 	rel := wi.Relationships
-	if rel != nil && rel.Assignee != nil && rel.Assignee.Data != nil {
+	if rel != nil && rel.Assignee != nil {
 		assigneeData := rel.Assignee.Data
 		identityRepo := account.NewIdentityRepository(r.db)
-		uuidStr := assigneeData.ID
-		if uuidStr == nil {
+		if assigneeData == nil {
 			// remove Assignee
-			wi.Attributes[SystemAssignee] = nil
+			delete(wi.Attributes, SystemAssignee)
 		} else {
-			assigneeUUID, err := uuid.FromString(*uuidStr)
+			uuidStr := assigneeData.ID
+			assigneeUUID, err := uuid.FromString(uuidStr)
 			if err != nil {
 				return nil, NewBadParameterError("data.relationships.assignee.data.id", uuidStr)
 			}
@@ -87,7 +87,7 @@ func (r *GormWorkItem2Repository) Save(ctx context.Context, wi app.WorkItemDataF
 			if err != nil {
 				return nil, NewBadParameterError("data.relationships.assignee.data.id", uuidStr)
 			}
-			wi.Attributes[SystemAssignee] = *uuidStr
+			wi.Attributes[SystemAssignee] = uuidStr
 			//  ToDO : make it a list and append
 			// existingAssignees := res.Fields[SystemAssignee]
 			// wi.Attributes.Fields[SystemAssignee] = append(existingAssignees, uuidStr)

@@ -3,7 +3,7 @@ package application
 import (
 	"github.com/almighty/almighty-core/app"
 	"github.com/almighty/almighty-core/criteria"
-	satoriuuid "github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 )
 
@@ -19,7 +19,7 @@ type WorkItemRepository interface {
 // WorkItem2Repository currently being used only to update WorkItem.
 // ToDo: add other methods as and when needed.
 type WorkItem2Repository interface {
-	Save(ctx context.Context, wi app.WorkItemDataForUpdate) (*app.WorkItem, error)
+	Save(ctx context.Context, wi app.WorkItem2) (*app.WorkItem, error)
 }
 
 // WorkItemTypeRepository encapsulates storage & retrieval of work item types
@@ -55,6 +55,7 @@ type SearchRepository interface {
 // IdentityRepository encapsulates identity
 type IdentityRepository interface {
 	List(ctx context.Context) (*app.IdentityArray, error)
+	ValidIdentity(context.Context, uuid.UUID) bool
 }
 
 // WorkItemLinkCategoryRepository encapsulates storage & retrieval of work item link categories
@@ -68,7 +69,7 @@ type WorkItemLinkCategoryRepository interface {
 
 // WorkItemLinkTypeRepository encapsulates storage & retrieval of work item link types
 type WorkItemLinkTypeRepository interface {
-	Create(ctx context.Context, name string, description *string, sourceTypeName, targetTypeName, forwardName, reverseName, topology string, linkCategory satoriuuid.UUID) (*app.WorkItemLinkType, error)
+	Create(ctx context.Context, name string, description *string, sourceTypeName, targetTypeName, forwardName, reverseName, topology string, linkCategory uuid.UUID) (*app.WorkItemLinkType, error)
 	Load(ctx context.Context, ID string) (*app.WorkItemLinkType, error)
 	List(ctx context.Context) (*app.WorkItemLinkTypeArray, error)
 	Delete(ctx context.Context, ID string) error
@@ -77,7 +78,7 @@ type WorkItemLinkTypeRepository interface {
 
 // WorkItemLinkRepository encapsulates storage & retrieval of work item links
 type WorkItemLinkRepository interface {
-	Create(ctx context.Context, sourceID, targetID uint64, linkTypeID satoriuuid.UUID) (*app.WorkItemLink, error)
+	Create(ctx context.Context, sourceID, targetID uint64, linkTypeID uuid.UUID) (*app.WorkItemLink, error)
 	Load(ctx context.Context, ID string) (*app.WorkItemLink, error)
 	List(ctx context.Context) (*app.WorkItemLinkArray, error)
 	Delete(ctx context.Context, ID string) error

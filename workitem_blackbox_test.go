@@ -520,9 +520,9 @@ func TestPagingDefaultAndMaxSize(t *testing.T) {
 }
 
 // ========== helper functions for tests inside WorkItem2Suite ==========
-func getMinimumRequiredUpdatePayload(wi *app.WorkItem) *app.UpdateWorkItemJSONAPIPayload {
-	return &app.UpdateWorkItemJSONAPIPayload{
-		Data: &app.WorkItemDataForUpdate{
+func getMinimumRequiredUpdatePayload(wi *app.WorkItem) *app.UpdateWorkitem2Payload {
+	return &app.UpdateWorkitem2Payload{
+		Data: &app.WorkItem2{
 			Type: models.APIStinrgTypeWorkItem,
 			ID:   wi.ID,
 			Attributes: map[string]interface{}{
@@ -558,7 +558,7 @@ type WorkItem2Suite struct {
 	priKey         *rsa.PrivateKey
 	svc            *goa.Service
 	wi             *app.WorkItem
-	minimumPayload *app.UpdateWorkItemJSONAPIPayload
+	minimumPayload *app.UpdateWorkitem2Payload
 }
 
 func (s *WorkItem2Suite) SetupSuite() {
@@ -634,7 +634,7 @@ func (s *WorkItem2Suite) TestWI2UpdateInvalidUUID() {
 	invalidUserUUID := fmt.Sprintf("%s-invalid", tempUser.ID.String())
 	assignee := &app.RelationAssignee{
 		Data: &app.AssigneeData{
-			ID:   &invalidUserUUID,
+			ID:   invalidUserUUID,
 			Type: models.APIStinrgTypeAssignee,
 		},
 	}
@@ -668,7 +668,7 @@ func (s *WorkItem2Suite) TestWI2UpdateRemoveAssignee() {
 	tempUserUUID := tempUser.ID.String()
 	assignee := &app.RelationAssignee{
 		Data: &app.AssigneeData{
-			ID:   &tempUserUUID,
+			ID:   tempUserUUID,
 			Type: models.APIStinrgTypeAssignee,
 		},
 	}
@@ -676,16 +676,14 @@ func (s *WorkItem2Suite) TestWI2UpdateRemoveAssignee() {
 
 	_, updatedWI := test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
-	assert.Equal(s.T(), *updatedWI.Data.Relationships.Assignee.Data.ID, tempUserUUID)
+	assert.Equal(s.T(), updatedWI.Data.Relationships.Assignee.Data.ID, tempUserUUID)
 
 	// Remove assignee
 	assignee = &app.RelationAssignee{
-		Data: &app.AssigneeData{
-			ID:   nil,
-			Type: models.APIStinrgTypeAssignee,
-		},
+		Data: nil,
 	}
 	s.minimumPayload.Data.Relationships.Assignee = assignee
+
 	// Update should fail because of version conflict
 	test.UpdateWorkitem2BadRequest(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 
@@ -694,7 +692,7 @@ func (s *WorkItem2Suite) TestWI2UpdateRemoveAssignee() {
 
 	_, updatedWI = test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
-	assert.Nil(s.T(), updatedWI.Data.Relationships.Assignee)
+	assert.Nil(s.T(), updatedWI.Data.Relationships.Assignee.Data)
 }
 
 func (s *WorkItem2Suite) TestWI2UpdateOnlyAssignee() {
@@ -705,7 +703,7 @@ func (s *WorkItem2Suite) TestWI2UpdateOnlyAssignee() {
 	tempUserUUID := tempUser.ID.String()
 	assignee := &app.RelationAssignee{
 		Data: &app.AssigneeData{
-			ID:   &tempUserUUID,
+			ID:   tempUserUUID,
 			Type: models.APIStinrgTypeAssignee,
 		},
 	}
@@ -713,13 +711,14 @@ func (s *WorkItem2Suite) TestWI2UpdateOnlyAssignee() {
 
 	_, updatedWI := test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
-	assert.Equal(s.T(), *updatedWI.Data.Relationships.Assignee.Data.ID, tempUserUUID)
+	assert.Equal(s.T(), updatedWI.Data.Relationships.Assignee.Data.ID, tempUserUUID)
 
 }
 
 func (s *WorkItem2Suite) TestWI2UpdateOnlyDescription() {
 	modifiedDescription := "Only Description is modified"
 	s.minimumPayload.Data.Attributes[models.SystemDescription] = modifiedDescription
+
 	_, updatedWI := test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
 	assert.Equal(s.T(), updatedWI.Data.Attributes[models.SystemDescription], modifiedDescription)
@@ -735,11 +734,11 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 	assert.Equal(s.T(), updatedWI.Data.Attributes[models.SystemTitle], modifiedTitle)
 
 	// verify self link value
-	if !strings.HasPrefix(*updatedWI.Links.Self, "http://") {
-		assert.Fail(s.T(), fmt.Sprintf("%s is not absolute URL", *updatedWI.Links.Self))
+	if !strings.HasPrefix(updatedWI.Links.Self, "http://") {
+		assert.Fail(s.T(), fmt.Sprintf("%s is not absolute URL", updatedWI.Links.Self))
 	}
-	if !strings.HasSuffix(*updatedWI.Links.Self, fmt.Sprintf("/%s", updatedWI.Data.ID)) {
-		assert.Fail(s.T(), fmt.Sprintf("%s is not FETCH URL of the resource", *updatedWI.Links.Self))
+	if !strings.HasSuffix(updatedWI.Links.Self, fmt.Sprintf("/%s", updatedWI.Data.ID)) {
+		assert.Fail(s.T(), fmt.Sprintf("%s is not FETCH URL of the resource", updatedWI.Links.Self))
 	}
 	// clean up and keep version updated in order to keep object future usage
 	delete(s.minimumPayload.Data.Attributes, models.SystemTitle)
@@ -756,7 +755,7 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 	maliciousUUID := "non UUID string"
 	s.minimumPayload.Data.Relationships.Assignee = &app.RelationAssignee{
 		Data: &app.AssigneeData{
-			ID:   &maliciousUUID,
+			ID:   maliciousUUID,
 			Type: models.APIStinrgTypeAssignee,
 		},
 	}
@@ -764,13 +763,13 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 
 	s.minimumPayload.Data.Relationships.Assignee = &app.RelationAssignee{
 		Data: &app.AssigneeData{
-			ID:   &newUserUUID,
+			ID:   newUserUUID,
 			Type: models.APIStinrgTypeAssignee,
 		},
 	}
 	_, updatedWI = test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
-	assert.Equal(s.T(), *updatedWI.Data.Relationships.Assignee.Data.ID, newUser.ID.String())
+	assert.Equal(s.T(), updatedWI.Data.Relationships.Assignee.Data.ID, newUser.ID.String())
 
 	// need to do in order to keep object future usage
 	s.minimumPayload.Data.Attributes["version"] = strconv.Itoa(updatedWI.Data.Attributes["version"].(int))
@@ -782,12 +781,48 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 	s.minimumPayload.Data.Attributes["version"] = correctVersion
 
 	// Add test to remove assignee for WI
-	s.minimumPayload.Data.Relationships.Assignee.Data.ID = nil
+	s.minimumPayload.Data.Relationships.Assignee.Data = nil
 	_, updatedWI = test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
-	require.Nil(s.T(), updatedWI.Data.Relationships.Assignee)
+	require.Nil(s.T(), updatedWI.Data.Relationships.Assignee.Data)
 	// need to do in order to keep object future usage
 	s.minimumPayload.Data.Attributes["version"] = strconv.Itoa(updatedWI.Data.Attributes["version"].(int))
+}
+
+func (s *WorkItem2Suite) TestWI2SuccessCreateWorkItem() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2FailCreateMissingBaseType() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2FailCreateWithBaseTypeAsField() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2FailCreateWtihAssigneeAsField() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2SuccessCreateWithAssignee() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2SuccessShow() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2FailShowMissing() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2SuccessDelete() {
+	s.T().Skip("Not implemented")
+}
+
+func (s *WorkItem2Suite) TestWI2FailMissingDelete() {
+	s.T().Skip("Not implemented")
 }
 
 // a normal test function that will kick off WorkItem2Suite
