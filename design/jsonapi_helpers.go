@@ -120,7 +120,6 @@ func JSONSingle(name, description string, data *d.UserTypeDefinition, links *d.U
 		a.Description(description)
 		if links != nil {
 			a.Attribute("links", links)
-			a.Required("links")
 		}
 		a.Attribute("data", data)
 		a.Required("data")

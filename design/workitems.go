@@ -5,7 +5,7 @@ import (
 	a "github.com/goadesign/goa/design/apidsl"
 )
 
-// createWorkItem defines how an update payload will look like
+// workItem2 defines how an update payload will look like
 var workItem2 = a.Type("WorkItem2", func() {
 	a.Attribute("type", d.String, func() {
 		a.Enum("workitems")
@@ -18,7 +18,7 @@ var workItem2 = a.Type("WorkItem2", func() {
 	})
 	a.Attribute("relationships", workItemRelationships)
 	// relationships must be required becasue we MUST have workItemType during PATCh
-	a.Required("type", "id", "attributes")
+	a.Required("type", "attributes")
 })
 
 // WorkItemRelationships defines only `assignee` as of now. To be updated
@@ -46,7 +46,7 @@ var assigneeData = a.Type("AssigneeData", func() {
 })
 
 // relationBaseType is top level block for WorkItemType relationship
-var relationBaseType = a.Type("RelationshipBaseType", func() {
+var relationBaseType = a.Type("RelationBaseType", func() {
 	a.Attribute("data", baseTypeData)
 	a.Required("data")
 })
@@ -82,12 +82,6 @@ var workItemSingle = JSONSingle(
 	"WorkItem2", "A work item holds field values according to a given field type in JSONAPI form",
 	workItem2,
 	workItemLinks)
-
-// createWorkItem is the media type for work items
-var createWorkItem = JSONSingle(
-	"CreateWorkItem2", "A work item holds field values according to a given field type in JSONAPI form",
-	workItem2,
-	nil)
 
 // new version of "list" for migration
 var _ = a.Resource("workitem.2", func() {
@@ -129,7 +123,7 @@ var _ = a.Resource("workitem.2", func() {
 			a.POST(""),
 		)
 		a.Description("create work item with type and id.")
-		a.Payload(createWorkItem)
+		a.Payload(workItemSingle)
 		a.Response(d.Created, "/workitems/.*", func() {
 			a.Media(workItemSingle)
 		})
@@ -161,7 +155,7 @@ var _ = a.Resource("workitem.2", func() {
 		a.Params(func() {
 			a.Param("id", d.String, "id")
 		})
-		a.Payload(createWorkItem)
+		a.Payload(workItemSingle)
 		a.Response(d.OK, func() {
 			a.Media(workItemSingle)
 		})

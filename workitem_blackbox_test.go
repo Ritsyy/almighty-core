@@ -523,11 +523,20 @@ func TestPagingDefaultAndMaxSize(t *testing.T) {
 func getMinimumRequiredUpdatePayload(wi *app.WorkItem) *app.UpdateWorkitem2Payload {
 	return &app.UpdateWorkitem2Payload{
 		Data: &app.WorkItem2{
-			Type: models.APIStinrgTypeWorkItem,
-			ID:   wi.ID,
+			Type: APIStringTypeWorkItem,
+			ID:   &wi.ID,
 			Attributes: map[string]interface{}{
-				"version": strconv.Itoa(wi.Version),
+				"version": wi.Version,
 			},
+		},
+	}
+}
+
+func minimumRequiredCreatePayload() *app.CreateWorkitem2Payload {
+	return &app.CreateWorkitem2Payload{
+		Data: &app.WorkItem2{
+			Type:       APIStringTypeWorkItem,
+			Attributes: map[string]interface{}{},
 		},
 	}
 }
@@ -635,7 +644,7 @@ func (s *WorkItem2Suite) TestWI2UpdateInvalidUUID() {
 	assignee := &app.RelationAssignee{
 		Data: &app.AssigneeData{
 			ID:   invalidUserUUID,
-			Type: models.APIStinrgTypeAssignee,
+			Type: APIStringTypeAssignee,
 		},
 	}
 	s.minimumPayload.Data.Relationships.Assignee = assignee
@@ -644,17 +653,19 @@ func (s *WorkItem2Suite) TestWI2UpdateInvalidUUID() {
 
 func (s *WorkItem2Suite) TestWI2UpdateVersionConflict() {
 	test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
-	s.minimumPayload.Data.Attributes["version"] = "2398475203"
+	s.minimumPayload.Data.Attributes["version"] = 2398475203
 	test.UpdateWorkitem2BadRequest(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 }
 
 func (s *WorkItem2Suite) TestWI2UpdateWithNonExistentID() {
-	s.minimumPayload.Data.ID = "2398475203"
-	test.UpdateWorkitem2NotFound(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.minimumPayload.Data.ID, s.minimumPayload)
+	id := "2398475203"
+	s.minimumPayload.Data.ID = &id
+	test.UpdateWorkitem2NotFound(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, id, s.minimumPayload)
 }
 
 func (s *WorkItem2Suite) TestWI2UpdateWithInvalidID() {
-	s.minimumPayload.Data.ID = "some non-int ID"
+	id := "some non-int ID"
+	s.minimumPayload.Data.ID = &id
 	// pass s.wi.ID below, because that creates a route to the controller
 	// if do not pass s.wi.ID then we will be testing goa's code and not ours
 	test.UpdateWorkitem2NotFound(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
@@ -669,7 +680,7 @@ func (s *WorkItem2Suite) TestWI2UpdateRemoveAssignee() {
 	assignee := &app.RelationAssignee{
 		Data: &app.AssigneeData{
 			ID:   tempUserUUID,
-			Type: models.APIStinrgTypeAssignee,
+			Type: APIStringTypeAssignee,
 		},
 	}
 	s.minimumPayload.Data.Relationships.Assignee = assignee
@@ -688,7 +699,7 @@ func (s *WorkItem2Suite) TestWI2UpdateRemoveAssignee() {
 	test.UpdateWorkitem2BadRequest(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 
 	// update version and then update assignee to NIL
-	s.minimumPayload.Data.Attributes["version"] = strconv.Itoa(updatedWI.Data.Attributes["version"].(int))
+	s.minimumPayload.Data.Attributes["version"] = updatedWI.Data.Attributes["version"].(float64)
 
 	_, updatedWI = test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
@@ -704,7 +715,7 @@ func (s *WorkItem2Suite) TestWI2UpdateOnlyAssignee() {
 	assignee := &app.RelationAssignee{
 		Data: &app.AssigneeData{
 			ID:   tempUserUUID,
-			Type: models.APIStinrgTypeAssignee,
+			Type: APIStringTypeAssignee,
 		},
 	}
 	s.minimumPayload.Data.Relationships.Assignee = assignee
@@ -737,12 +748,12 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 	if !strings.HasPrefix(updatedWI.Links.Self, "http://") {
 		assert.Fail(s.T(), fmt.Sprintf("%s is not absolute URL", updatedWI.Links.Self))
 	}
-	if !strings.HasSuffix(updatedWI.Links.Self, fmt.Sprintf("/%s", updatedWI.Data.ID)) {
+	if !strings.HasSuffix(updatedWI.Links.Self, fmt.Sprintf("/%s", *updatedWI.Data.ID)) {
 		assert.Fail(s.T(), fmt.Sprintf("%s is not FETCH URL of the resource", updatedWI.Links.Self))
 	}
 	// clean up and keep version updated in order to keep object future usage
 	delete(s.minimumPayload.Data.Attributes, models.SystemTitle)
-	s.minimumPayload.Data.Attributes["version"] = strconv.Itoa(updatedWI.Data.Attributes["version"].(int))
+	s.minimumPayload.Data.Attributes["version"] = updatedWI.Data.Attributes["version"].(float64)
 
 	// update assignee relationship and verify
 	newUser := createOneRandomUserIdentity(s.svc.Context, s.db)
@@ -756,7 +767,7 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 	s.minimumPayload.Data.Relationships.Assignee = &app.RelationAssignee{
 		Data: &app.AssigneeData{
 			ID:   maliciousUUID,
-			Type: models.APIStinrgTypeAssignee,
+			Type: APIStringTypeAssignee,
 		},
 	}
 	test.UpdateWorkitem2BadRequest(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
@@ -764,19 +775,16 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 	s.minimumPayload.Data.Relationships.Assignee = &app.RelationAssignee{
 		Data: &app.AssigneeData{
 			ID:   newUserUUID,
-			Type: models.APIStinrgTypeAssignee,
+			Type: APIStringTypeAssignee,
 		},
 	}
 	_, updatedWI = test.UpdateWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	require.NotNil(s.T(), updatedWI)
 	assert.Equal(s.T(), updatedWI.Data.Relationships.Assignee.Data.ID, newUser.ID.String())
 
-	// need to do in order to keep object future usage
-	s.minimumPayload.Data.Attributes["version"] = strconv.Itoa(updatedWI.Data.Attributes["version"].(int))
-
 	// update to wrong version
-	correctVersion := s.minimumPayload.Data.Attributes["version"]
-	s.minimumPayload.Data.Attributes["version"] = "12453972348"
+	correctVersion := updatedWI.Data.Attributes["version"].(float64)
+	s.minimumPayload.Data.Attributes["version"] = 12453972348
 	test.UpdateWorkitem2BadRequest(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, s.wi.ID, s.minimumPayload)
 	s.minimumPayload.Data.Attributes["version"] = correctVersion
 
@@ -786,43 +794,134 @@ func (s *WorkItem2Suite) TestWI2UpdateMultipleScenarios() {
 	require.NotNil(s.T(), updatedWI)
 	require.Nil(s.T(), updatedWI.Data.Relationships.Assignee.Data)
 	// need to do in order to keep object future usage
-	s.minimumPayload.Data.Attributes["version"] = strconv.Itoa(updatedWI.Data.Attributes["version"].(int))
+	s.minimumPayload.Data.Attributes["version"] = updatedWI.Data.Attributes["version"].(float64)
 }
 
 func (s *WorkItem2Suite) TestWI2SuccessCreateWorkItem() {
-	s.T().Skip("Not implemented")
+	c := minimumRequiredCreatePayload()
+	c.Data.Attributes[models.SystemTitle] = "Title"
+	c.Data.Attributes[models.SystemState] = models.SystemStateNew
+	c.Data.Relationships = &app.WorkItemRelationships{
+		BaseType: &app.RelationBaseType{
+			Data: &app.BaseTypeData{
+				Type: "workitemtypes",
+				ID:   "system.bug",
+			},
+		},
+	}
+
+	_, wi := test.CreateWorkitem2Created(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, c)
+	assert.NotNil(s.T(), wi.Data)
+	assert.NotNil(s.T(), wi.Data.ID)
+	assert.NotNil(s.T(), wi.Data.Type)
+	assert.NotNil(s.T(), wi.Data.Attributes)
+	assert.NotNil(s.T(), wi.Data.Relationships.BaseType.Data.ID)
+	assert.NotNil(s.T(), wi.Links)
+	assert.NotNil(s.T(), wi.Links.Self)
 }
 
 func (s *WorkItem2Suite) TestWI2FailCreateMissingBaseType() {
-	s.T().Skip("Not implemented")
-}
+	c := minimumRequiredCreatePayload()
+	c.Data.Attributes[models.SystemTitle] = "Title"
+	c.Data.Attributes[models.SystemState] = models.SystemStateNew
 
-func (s *WorkItem2Suite) TestWI2FailCreateWithBaseTypeAsField() {
-	s.T().Skip("Not implemented")
+	test.CreateWorkitem2BadRequest(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, c)
 }
 
 func (s *WorkItem2Suite) TestWI2FailCreateWtihAssigneeAsField() {
-	s.T().Skip("Not implemented")
+	s.T().Skip("Not working.. require WIT understanding on server side")
+	c := minimumRequiredCreatePayload()
+	c.Data.Attributes[models.SystemTitle] = "Title"
+	c.Data.Attributes[models.SystemState] = models.SystemStateNew
+	c.Data.Attributes[models.SystemAssignee] = "34343"
+	c.Data.Relationships = &app.WorkItemRelationships{
+		BaseType: &app.RelationBaseType{
+			Data: &app.BaseTypeData{
+				Type: "workitemtypes",
+				ID:   "system.bug",
+			},
+		},
+	}
+	_, wi := test.CreateWorkitem2Created(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, c)
+	assert.NotNil(s.T(), wi.Data)
+	assert.NotNil(s.T(), wi.Data.ID)
+	assert.NotNil(s.T(), wi.Data.Type)
+	assert.NotNil(s.T(), wi.Data.Attributes)
+	assert.Nil(s.T(), wi.Data.Relationships.Assignee.Data)
 }
 
-func (s *WorkItem2Suite) TestWI2SuccessCreateWithAssignee() {
-	s.T().Skip("Not implemented")
+func (s *WorkItem2Suite) TestWI2SuccessCreateWithAssigneeRelation() {
+	c := minimumRequiredCreatePayload()
+	c.Data.Attributes[models.SystemTitle] = "Title"
+	c.Data.Attributes[models.SystemState] = models.SystemStateNew
+	c.Data.Relationships = &app.WorkItemRelationships{
+		BaseType: &app.RelationBaseType{
+			Data: &app.BaseTypeData{
+				Type: "workitemtypes",
+				ID:   "system.bug",
+			},
+		},
+		Assignee: &app.RelationAssignee{
+			Data: &app.AssigneeData{
+				Type: "identities",
+				ID:   "341421",
+			},
+		},
+	}
+	_, wi := test.CreateWorkitem2Created(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, c)
+	assert.NotNil(s.T(), wi.Data)
+	assert.NotNil(s.T(), wi.Data.ID)
+	assert.NotNil(s.T(), wi.Data.Type)
+	assert.NotNil(s.T(), wi.Data.Attributes)
+	assert.NotNil(s.T(), wi.Data.Relationships.Assignee.Data)
+	assert.NotNil(s.T(), wi.Data.Relationships.Assignee.Data.ID)
 }
 
 func (s *WorkItem2Suite) TestWI2SuccessShow() {
-	s.T().Skip("Not implemented")
+	c := minimumRequiredCreatePayload()
+	c.Data.Attributes[models.SystemTitle] = "Title"
+	c.Data.Attributes[models.SystemState] = models.SystemStateNew
+	c.Data.Relationships = &app.WorkItemRelationships{
+		BaseType: &app.RelationBaseType{
+			Data: &app.BaseTypeData{
+				Type: "workitemtypes",
+				ID:   "system.bug",
+			},
+		},
+	}
+	_, createdWi := test.CreateWorkitem2Created(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, c)
+	_, fetchedWi := test.ShowWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, *createdWi.Data.ID)
+	assert.NotNil(s.T(), fetchedWi.Data)
+	assert.NotNil(s.T(), fetchedWi.Data.ID)
+	assert.Equal(s.T(), *createdWi.Data.ID, *fetchedWi.Data.ID)
+	assert.NotNil(s.T(), fetchedWi.Data.Type)
+	assert.NotNil(s.T(), fetchedWi.Data.Attributes)
 }
 
 func (s *WorkItem2Suite) TestWI2FailShowMissing() {
-	s.T().Skip("Not implemented")
+	test.ShowWorkitem2NotFound(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, "00000000")
 }
 
 func (s *WorkItem2Suite) TestWI2SuccessDelete() {
-	s.T().Skip("Not implemented")
+	c := minimumRequiredCreatePayload()
+	c.Data.Attributes[models.SystemTitle] = "Title"
+	c.Data.Attributes[models.SystemState] = models.SystemStateNew
+	c.Data.Relationships = &app.WorkItemRelationships{
+		BaseType: &app.RelationBaseType{
+			Data: &app.BaseTypeData{
+				Type: "workitemtypes",
+				ID:   "system.bug",
+			},
+		},
+	}
+	_, createdWi := test.CreateWorkitem2Created(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, c)
+	test.ShowWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, *createdWi.Data.ID)
+	test.DeleteWorkitem2OK(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, *createdWi.Data.ID)
+	test.ShowWorkitem2NotFound(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, *createdWi.Data.ID)
 }
 
 func (s *WorkItem2Suite) TestWI2FailMissingDelete() {
-	s.T().Skip("Not implemented")
+	test.DeleteWorkitem2NotFound(s.T(), s.svc.Context, s.svc, s.wi2Ctrl, "00000000")
 }
 
 // a normal test function that will kick off WorkItem2Suite

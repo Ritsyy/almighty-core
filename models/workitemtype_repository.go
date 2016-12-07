@@ -11,16 +11,6 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-// NewWorkItemRepository creates a wi repository based on gorm
-func NewWorkItemRepository(db *gorm.DB) *GormWorkItemRepository {
-	return &GormWorkItemRepository{db, &GormWorkItemTypeRepository{db}}
-}
-
-// NewWorkItem2Repository creates a wi repository based on gorm
-func NewWorkItem2Repository(db *gorm.DB) *GormWorkItem2Repository {
-	return &GormWorkItem2Repository{db, &GormWorkItemTypeRepository{db}}
-}
-
 // NewWorkItemTypeRepository creates a wi type repository based on gorm
 func NewWorkItemTypeRepository(db *gorm.DB) *GormWorkItemTypeRepository {
 	return &GormWorkItemTypeRepository{db}

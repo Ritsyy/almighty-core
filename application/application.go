@@ -5,7 +5,6 @@ import "github.com/almighty/almighty-core/comment"
 //An Application stands for a particular implementation of the business logic of our application
 type Application interface {
 	WorkItems() WorkItemRepository
-	WorkItems2() WorkItem2Repository
 	WorkItemTypes() WorkItemTypeRepository
 	Trackers() TrackerRepository
 	TrackerQueries() TrackerQueryRepository

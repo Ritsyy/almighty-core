@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"reflect"
 	"strconv"
 
 	"golang.org/x/net/context"
@@ -20,6 +21,10 @@ import (
 const (
 	pageSizeDefault = 20
 	pageSizeMax     = 100
+
+	APIStringTypeAssignee     = "identities"
+	APIStringTypeWorkItem     = "workitems"
+	APIStringTypeWorkItemType = "workitemtypes"
 )
 
 // Workitem2Controller implements the workitem.2 resource.
@@ -189,16 +194,16 @@ func (c *Workitem2Controller) ConvertWorkItemToJSONAPI(wi *app.WorkItem) *app.Wo
 	// construct default values from input WI
 
 	op := &app.WorkItem2{
-		ID:   wi.ID,
-		Type: models.APIStinrgTypeWorkItem,
+		ID:   &wi.ID,
+		Type: APIStringTypeWorkItem,
 		Attributes: map[string]interface{}{
 			"version": wi.Version,
 		},
 		Relationships: &app.WorkItemRelationships{
-			BaseType: &app.RelationshipBaseType{
+			BaseType: &app.RelationBaseType{
 				Data: &app.BaseTypeData{
 					ID:   wi.Type,
-					Type: models.APIStinrgTypeWorkItemType,
+					Type: APIStringTypeWorkItemType,
 				},
 			},
 		},
@@ -212,7 +217,7 @@ func (c *Workitem2Controller) ConvertWorkItemToJSONAPI(wi *app.WorkItem) *app.Wo
 				op.Relationships.Assignee = &app.RelationAssignee{
 					Data: &app.AssigneeData{
 						ID:   valStr,
-						Type: models.APIStinrgTypeAssignee,
+						Type: APIStringTypeAssignee,
 					},
 				}
 			}
@@ -232,15 +237,12 @@ func (c *Workitem2Controller) ConvertWorkItemToJSONAPI(wi *app.WorkItem) *app.Wo
 func (c *Workitem2Controller) ConvertJSONAPIToWorkItem(source *app.WorkItem2, target *app.WorkItem) error {
 	// construct default values from input WI
 
-	version := -1
-	var err error
-	v, ok := source.Attributes["version"].(string)
+	var version = -1
+	v, ok := source.Attributes["version"].(float64)
 	if ok {
-		version, err = strconv.Atoi(v)
-		if err != nil {
-			version = -1
-		}
+		version = int(v)
 	}
+	fmt.Println(version, reflect.TypeOf(source.Attributes["version"]))
 	target.Version = version
 
 	if source.Relationships != nil && source.Relationships.Assignee != nil {
@@ -270,7 +272,12 @@ func (c *Workitem2Controller) ConvertJSONAPIToWorkItem(source *app.WorkItem2, ta
 func (c *Workitem2Controller) Update(ctx *app.UpdateWorkitem2Context) error {
 	return application.Transactional(c.db, func(appl application.Application) error {
 
-		wi, err := appl.WorkItems().Load(ctx, ctx.Payload.Data.ID)
+		if ctx.Payload == nil || ctx.Payload.Data == nil || ctx.Payload.Data.ID == nil {
+			jerrors, _ := jsonapi.ErrorToJSONAPIErrors(models.NewBadParameterError("data.id", nil))
+			return ctx.NotFound(jerrors)
+		}
+
+		wi, err := appl.WorkItems().Load(ctx, *ctx.Payload.Data.ID)
 		if err != nil {
 			jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrNotFound(fmt.Sprintf("Error updating work item: %s", err.Error())))
 			return ctx.NotFound(jerrors)
@@ -331,9 +338,14 @@ func (c *Workitem2Controller) Create(ctx *app.CreateWorkitem2Context) error {
 
 	}
 
+	wi := app.WorkItem{
+		Fields: make(map[string]interface{}),
+	}
+	c.ConvertJSONAPIToWorkItem(ctx.Payload.Data, &wi)
+
 	return application.Transactional(c.db, func(appl application.Application) error {
 
-		wi, err := appl.WorkItems().Create(ctx, *wit, ctx.Payload.Data.Attributes, currentUser)
+		wi, err := appl.WorkItems().Create(ctx, *wit, wi.Fields, currentUser)
 		if err != nil {
 			switch err := err.(type) {
 			case models.BadParameterError:
@@ -368,6 +380,9 @@ func (c *Workitem2Controller) Show(ctx *app.ShowWorkitem2Context) error {
 		wi, err := appl.WorkItems().Load(ctx, ctx.ID)
 		if err != nil {
 			switch err := err.(type) {
+			case models.NotFoundError:
+				jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrNotFound(err.Error()))
+				return ctx.NotFound(jerrors)
 			case models.BadParameterError:
 				jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrBadRequest(fmt.Sprintf("Error updating work item: %s", err.Error())))
 				return ctx.BadRequest(jerrors)
@@ -399,6 +414,9 @@ func (c *Workitem2Controller) Delete(ctx *app.DeleteWorkitem2Context) error {
 		err := appl.WorkItems().Delete(ctx, ctx.ID)
 		if err != nil {
 			switch err := err.(type) {
+			case models.NotFoundError:
+				jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrNotFound(err.Error()))
+				return ctx.NotFound(jerrors)
 			case models.BadParameterError:
 				jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrBadRequest(fmt.Sprintf("Error updating work item: %s", err.Error())))
 				return ctx.BadRequest(jerrors)
