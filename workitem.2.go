@@ -372,11 +372,6 @@ func (c *Workitem2Controller) Create(ctx *app.CreateWorkitem2Context) error {
 	})
 }
 
-func getAssignee(ctx *context.Context) string {
-	// logic
-	return "egrgrgr"
-}
-
 // Show does GET workitem
 func (c *Workitem2Controller) Show(ctx *app.ShowWorkitem2Context) error {
 	return application.Transactional(c.db, func(appl application.Application) error {
