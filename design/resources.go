@@ -15,6 +15,7 @@ var _ = a.Resource("workitem", func() {
 		a.Description("Retrieve work item with given id.")
 		a.Params(func() {
 			a.Param("id", d.String, "id")
+			a.Param("filter[assignee]", d.String, "a query language expression restricting the set of found work items")
 		})
 		a.Response(d.OK, func() {
 			a.Media(workItem)

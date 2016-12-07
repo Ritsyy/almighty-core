@@ -31,7 +31,7 @@ func (r *GormWorkItemRepository) LoadFromDB(ID string) (*WorkItem, error) {
 	}
 	log.Printf("loading work item %d", id)
 	res := WorkItem{}
-	tx := r.db.First(&res, id)
+	tx := r.db.Where("frtr tyhjt y").First(&res, id)
 	if tx.RecordNotFound() {
 		log.Printf("not found, res=%v", res)
 		return nil, NotFoundError{"work item", ID}
@@ -44,7 +44,7 @@ func (r *GormWorkItemRepository) LoadFromDB(ID string) (*WorkItem, error) {
 
 // Load returns the work item for the given id
 // returns NotFoundError, ConversionError or InternalError
-func (r *GormWorkItemRepository) Load(ctx context.Context, ID string) (*app.WorkItem, error) {
+func (r *GormWorkItemRepository) Load(ctx context.Context, ID string, assignee *string) (*app.WorkItem, error) {
 	res, err := r.LoadFromDB(ID)
 	if err != nil {
 		return nil, err

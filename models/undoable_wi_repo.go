@@ -30,8 +30,8 @@ type UndoableWorkItemRepository struct {
 }
 
 // Load implements application.WorkItemRepository
-func (r *UndoableWorkItemRepository) Load(ctx context.Context, ID string) (*app.WorkItem, error) {
-	return r.wrapped.Load(ctx, ID)
+func (r *UndoableWorkItemRepository) Load(ctx context.Context, ID string, assignee *string) (*app.WorkItem, error) {
+	return r.wrapped.Load(ctx, ID, assignee)
 }
 
 // Save implements application.WorkItemRepository

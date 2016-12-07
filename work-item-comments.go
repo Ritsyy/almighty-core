@@ -24,7 +24,7 @@ func NewWorkItemCommentsController(service *goa.Service, db application.DB) *Wor
 // Create runs the create action.
 func (c *WorkItemCommentsController) Create(ctx *app.CreateWorkItemCommentsContext) error {
 	return application.Transactional(c.db, func(appl application.Application) error {
-		_, err := appl.WorkItems().Load(ctx, ctx.ID)
+		_, err := appl.WorkItems().Load(ctx, ctx.ID, nil)
 		if err != nil {
 			jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrUnauthorized(err.Error()))
 			return ctx.NotFound(jerrors)
@@ -66,7 +66,7 @@ func (c *WorkItemCommentsController) Create(ctx *app.CreateWorkItemCommentsConte
 // List runs the list action.
 func (c *WorkItemCommentsController) List(ctx *app.ListWorkItemCommentsContext) error {
 	return application.Transactional(c.db, func(appl application.Application) error {
-		_, err := appl.WorkItems().Load(ctx, ctx.ID)
+		_, err := appl.WorkItems().Load(ctx, ctx.ID, nil)
 		if err != nil {
 			jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrUnauthorized(err.Error()))
 			return ctx.NotFound(jerrors)
