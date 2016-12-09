@@ -32,7 +32,7 @@ func NewWorkitemController(service *goa.Service, db application.DB) *WorkitemCon
 // Show runs the show action.
 func (c *WorkitemController) Show(ctx *app.ShowWorkitemContext) error {
 	return application.Transactional(c.db, func(appl application.Application) error {
-		wi, err := appl.WorkItems().Load(ctx.Context, ctx.ID)
+		wi, err := appl.WorkItems().Load(ctx.Context, ctx.ID, nil)
 		if err != nil {
 			jerrors, httpStatusCode := jsonapi.ErrorToJSONAPIErrors(err)
 			return ctx.ResponseData.Service.Send(ctx.Context, httpStatusCode, jerrors)

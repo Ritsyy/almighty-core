@@ -1,6 +1,7 @@
 package workitem
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 
@@ -14,7 +15,7 @@ import (
 
 // WorkItemRepository encapsulates storage & retrieval of work items
 type WorkItemRepository interface {
-	Load(ctx context.Context, ID string) (*app.WorkItem, error)
+	Load(ctx context.Context, ID string, assignee *string) (*app.WorkItem, error)
 	Save(ctx context.Context, wi app.WorkItem) (*app.WorkItem, error)
 	Delete(ctx context.Context, ID string) error
 	Create(ctx context.Context, typeID string, fields map[string]interface{}, creator string) (*app.WorkItem, error)
@@ -49,8 +50,11 @@ func (r *GormWorkItemRepository) LoadFromDB(ID string) (*WorkItem, error) {
 
 // Load returns the work item for the given id
 // returns NotFoundError, ConversionError or InternalError
-func (r *GormWorkItemRepository) Load(ctx context.Context, ID string) (*app.WorkItem, error) {
+func (r *GormWorkItemRepository) Load(ctx context.Context, ID string, assignee *string) (*app.WorkItem, error) {
 	res, err := r.LoadFromDB(ID)
+	fmt.Println("+++++res++++", res)
+	db := r.db.Model(&WorkItem{}).Related(&assignee)
+	fmt.Println("+++++++++++db++++++++++", db)
 	if err != nil {
 		return nil, err
 	}
@@ -183,6 +187,7 @@ func (r *GormWorkItemRepository) Create(ctx context.Context, typeID string, fiel
 // extracted this function from List() in order to close the rows object with "defer" for more readability
 // workaround for https://github.com/lib/pq/issues/81
 func (r *GormWorkItemRepository) listItemsFromDB(ctx context.Context, criteria criteria.Expression, start *int, limit *int) ([]WorkItem, uint64, error) {
+	fmt.Println("++++++criteria=============", criteria)
 	where, parameters, compileError := Compile(criteria)
 	if compileError != nil {
 		return nil, 0, errors.NewBadParameterError("expression", criteria)

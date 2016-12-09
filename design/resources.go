@@ -15,6 +15,7 @@ var _ = a.Resource("workitem", func() {
 		a.Description("Retrieve work item with given id.")
 		a.Params(func() {
 			a.Param("id", d.String, "id")
+			a.Param("filter[assignee]", d.String, "Retrieve workitems with logged in user")
 		})
 		a.Response(d.OK, func() {
 			a.Media(workItem)

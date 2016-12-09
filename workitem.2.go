@@ -187,7 +187,7 @@ func (c *Workitem2Controller) Update(ctx *app.UpdateWorkitem2Context) error {
 			return ctx.NotFound(jerrors)
 		}
 
-		wi, err := appl.WorkItems().Load(ctx, *ctx.Payload.Data.ID)
+		wi, err := appl.WorkItems().Load(ctx, *ctx.Payload.Data.ID, nil)
 		if err != nil {
 			jerrors, _ := jsonapi.ErrorToJSONAPIErrors(goa.ErrNotFound(fmt.Sprintf("Error updating work item: %s", err.Error())))
 			return ctx.NotFound(jerrors)
@@ -286,8 +286,9 @@ func (c *Workitem2Controller) Create(ctx *app.CreateWorkitem2Context) error {
 // Show does GET workitem
 func (c *Workitem2Controller) Show(ctx *app.ShowWorkitem2Context) error {
 	return application.Transactional(c.db, func(appl application.Application) error {
-
-		wi, err := appl.WorkItems().Load(ctx, ctx.ID)
+		assignee := ctx.FilterAssignee
+		fmt.Println("++++++++++++Assignee++++++++++++++", assignee)
+		wi, err := appl.WorkItems().Load(ctx, ctx.ID, assignee)
 		if err != nil {
 			switch err := err.(type) {
 			case errors.NotFoundError:
